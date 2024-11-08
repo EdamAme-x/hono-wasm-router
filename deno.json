@@ -1,0 +1,13 @@
+{
+  "name": "@evex/hono-wasm-router",
+  "version": "0.0.0",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "unstable": [
+    "sloppy-imports"
+  ],
+  "imports": {
+    "hono": "npm:hono@^4.6.9"
+  }
+}
