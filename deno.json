@@ -4,9 +4,6 @@
   "exports": {
     ".": "./index.ts"
   },
-  "unstable": [
-    "sloppy-imports"
-  ],
   "imports": {
     "hono": "npm:hono@^4.6.9"
   }

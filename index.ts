@@ -3,4 +3,4 @@
  * LinearRouter for Hono.
  */
 
-export { WasmRouter } from './router'
+export { WasmRouter } from "./router.ts";

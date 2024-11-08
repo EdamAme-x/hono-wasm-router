@@ -1,12 +1,12 @@
-import { WasmRouter } from '../router';
-import { Hono } from 'hono'
+import { WasmRouter } from "../router.ts";
+import { Hono } from "hono";
 
 const app = new Hono({
-    router: new WasmRouter()
-})
+  router: new WasmRouter(),
+});
 
-app.get('/', (c) => {
-    return c.text('Hello, World!')
-})
+app.get("/", (c) => {
+  return c.text("Hello, World!");
+});
 
-export default app
+export default app;
