@@ -330,7 +330,7 @@ var node = NewNode("", -1, map[string]*Node{})
 
 //export Add
 func Add(method js.Value, path js.Value, handlerIndex js.Value) {
-	// fmt.Println("Add", method, path, handlerIndex)
+	fmt.Println("Add", method, path, handlerIndex)
 	node = node.Insert(method.String(), path.String(), handlerIndex.Int())
 }
 
