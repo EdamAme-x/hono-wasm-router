@@ -1,10 +1,11 @@
-import type { Result, Router } from "hono/router";
+import { METHOD_NAME_ALL_LOWERCASE, METHODS, type Result, type Router } from "hono/router";
 import { loadWasmRouter } from "./wasm/router.ts";
 
 export class WasmRouter<T> implements Router<T> {
   name: string = "WasmRouter";
   // deno-lint-ignore no-explicit-any
   wasmRouter?: Record<string, any>;
+  mehotds: string[] = [METHOD_NAME_ALL_LOWERCASE, ...METHODS];
   routes: T[] = [];
 
   constructor() {
@@ -25,8 +26,11 @@ export class WasmRouter<T> implements Router<T> {
     if (!this.wasmRouter) {
       throw new Error("You should use `await new WasmRouter()`");
     }
+    if (!this.mehotds.includes(method.toLowerCase())) {
+      this.mehotds.push(method.toLowerCase());
+    }
     this.routes.push(handler);
-    this.wasmRouter.Add(method, path, this.routes.length - 1);
+    this.wasmRouter.Add(this.mehotds.indexOf(method.toLowerCase()), path, this.routes.length - 1);
   }
 
   match(method: string, path: string): Result<T> {

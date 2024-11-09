@@ -10,7 +10,7 @@ import (
 	"syscall/js"
 )
 
-const METHOD_NAME_ALL = "ALL"
+const METHOD_NAME_ALL = 0
 
 func splitPath(path string) []string {
 	paths := strings.Split(path, "/")
@@ -116,7 +116,7 @@ type HandlerParamsSet struct {
 }
 
 type Node struct {
-	Methods []map[string]*HandlerSet
+	Methods []map[int]*HandlerSet
 
 	Children map[string]*Node
 	Patterns []Pattern
@@ -124,7 +124,7 @@ type Node struct {
 	Params   map[string]string
 }
 
-func (n *Node) Insert(method string, path string, handlerIndex int) *Node {
+func (n *Node) Insert(method int, path string, handlerIndex int) *Node {
 	n.Order++
 
 	curNode := n
@@ -143,7 +143,7 @@ func (n *Node) Insert(method string, path string, handlerIndex int) *Node {
 			continue
 		}
 
-		curNode.Children[part] = NewNode("", -1, map[string]*Node{})
+		curNode.Children[part] = NewNode(-1, -1, map[string]*Node{})
 
 		pattern := getPattern(part)
 		if pattern != nil {
@@ -155,10 +155,10 @@ func (n *Node) Insert(method string, path string, handlerIndex int) *Node {
 	}
 
 	if len(curNode.Methods) == 0 {
-		curNode.Methods = []map[string]*HandlerSet{}
+		curNode.Methods = []map[int]*HandlerSet{}
 	}
 
-	m := map[string]*HandlerSet{}
+	m := map[int]*HandlerSet{}
 
 	parsedPossibleKeys := []string{}
 	keysMap := make(map[string]bool)
@@ -177,7 +177,7 @@ func (n *Node) Insert(method string, path string, handlerIndex int) *Node {
 	return curNode
 }
 
-func (n *Node) getHandlerSets(node *Node, method string, nodeParams map[string]string, params map[string]string) []*HandlerParamsSet {
+func (n *Node) getHandlerSets(node *Node, method int, nodeParams map[string]string, params map[string]string) []*HandlerParamsSet {
 	handlerSets := []*HandlerParamsSet{}
 
 	for _, m := range node.Methods {
@@ -217,7 +217,7 @@ func (n *Node) getHandlerSets(node *Node, method string, nodeParams map[string]s
 	return handlerSets
 }
 
-func (n *Node) Search(method string, path string) [][]*HandlerParamsSet {
+func (n *Node) Search(method int, path string) [][]*HandlerParamsSet {
 	handlerSets := []*HandlerParamsSet{}
 
 	n.Params = map[string]string{}
@@ -300,7 +300,7 @@ func (n *Node) Search(method string, path string) [][]*HandlerParamsSet {
 	return [][]*HandlerParamsSet{results}
 }
 
-func NewNode(method string, handlerIndex int, children map[string]*Node) *Node {
+func NewNode(method int, handlerIndex int, children map[string]*Node) *Node {
 	node := &Node{
 		Order:  0,
 		Params: map[string]string{},
@@ -308,12 +308,12 @@ func NewNode(method string, handlerIndex int, children map[string]*Node) *Node {
 
 	node.Children = children
 
-	if method == "" && handlerIndex == -1 {
-		node.Methods = []map[string]*HandlerSet{}
+	if method == -1 && handlerIndex == -1 {
+		node.Methods = []map[int]*HandlerSet{}
 	} else {
-		m := map[string]*HandlerSet{}
+		m := map[int]*HandlerSet{}
 		m[method] = &HandlerSet{HandlerIndex: handlerIndex, PossibleKeys: []string{}, Score: 0}
-		node.Methods = []map[string]*HandlerSet{m}
+		node.Methods = []map[int]*HandlerSet{m}
 	}
 	node.Patterns = []Pattern{}
 
@@ -326,16 +326,21 @@ func main() {
 	<-c
 }
 
-var node = NewNode("", -1, map[string]*Node{})
+var node = NewNode(-1, -1, map[string]*Node{})
+
+//export Debug
+func Debug(path []js.Value) {
+	fmt.Printf("Debug %v\n", path)
+}
 
 //export Add
-func Add(method js.Value, path js.Value, handlerIndex js.Value) {
+func Add(method int, path string, handlerIndex int) {
 	fmt.Println("Add", method, path, handlerIndex)
-	node = node.Insert(method.String(), path.String(), handlerIndex.Int())
+	node = node.Insert(method, path, handlerIndex)
 }
 
 //export Match
-func Match(method js.Value, path js.Value) js.Value {
+func Match(method int, path string) js.Value {
 	fmt.Println("Match", method, path)
-	return js.ValueOf(node.Search(method.String(), path.String()))
+	return js.ValueOf(node.Search(method, path))
 }
