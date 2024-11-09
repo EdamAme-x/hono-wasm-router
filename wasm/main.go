@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall/js"
 )
 
 const METHOD_NAME_ALL = "ALL"
@@ -321,7 +322,6 @@ func NewNode(method string, handlerIndex int, children map[string]*Node) *Node {
 
 // Noop
 func main() {
-	fmt.Println("Hello, world!")
 	c := make(chan struct{})
 	<-c
 }
@@ -329,11 +329,13 @@ func main() {
 var node = NewNode("", -1, map[string]*Node{})
 
 //export Add
-func Add(method string, path string, handlerIndex int) {
-	node = node.Insert(method, path, handlerIndex)
+func Add(method js.Value, path js.Value, handlerIndex js.Value) {
+	// fmt.Println("Add", method, path, handlerIndex)
+	node = node.Insert(method.String(), path.String(), handlerIndex.Int())
 }
 
 //export Match
-func Match(method string, path string) [][]*HandlerParamsSet {
-	return node.Search(method, path)
+func Match(method js.Value, path js.Value) js.Value {
+	fmt.Println("Match", method, path)
+	return js.ValueOf(node.Search(method.String(), path.String()))
 }

@@ -2,7 +2,7 @@ import { WasmRouter } from "../router.ts";
 import { Hono } from "hono";
 
 const app = new Hono({
-  router: new WasmRouter(),
+  router: await new WasmRouter(),
 });
 
 app.get("/", (c) => {
