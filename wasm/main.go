@@ -10,7 +10,7 @@ import (
 	"syscall/js"
 )
 
-const METHOD_NAME_ALL = 0
+const METHOD_NAME_ALL = "ALL"
 
 func splitPath(path string) []string {
 	paths := strings.Split(path, "/")
@@ -116,7 +116,7 @@ type HandlerParamsSet struct {
 }
 
 type Node struct {
-	Methods []map[int]*HandlerSet
+	Methods []map[string]*HandlerSet
 
 	Children map[string]*Node
 	Patterns []Pattern
@@ -124,7 +124,7 @@ type Node struct {
 	Params   map[string]string
 }
 
-func (n *Node) Insert(method int, path string, handlerIndex int) *Node {
+func (n *Node) Insert(method string, path string, handlerIndex int) *Node {
 	n.Order++
 
 	curNode := n
@@ -143,7 +143,7 @@ func (n *Node) Insert(method int, path string, handlerIndex int) *Node {
 			continue
 		}
 
-		curNode.Children[part] = NewNode(-1, -1, map[string]*Node{})
+		curNode.Children[part] = NewNode("", -1, map[string]*Node{})
 
 		pattern := getPattern(part)
 		if pattern != nil {
@@ -154,11 +154,7 @@ func (n *Node) Insert(method int, path string, handlerIndex int) *Node {
 		curNode = curNode.Children[part]
 	}
 
-	if len(curNode.Methods) == 0 {
-		curNode.Methods = []map[int]*HandlerSet{}
-	}
-
-	m := map[int]*HandlerSet{}
+	m := map[string]*HandlerSet{}
 
 	parsedPossibleKeys := []string{}
 	keysMap := make(map[string]bool)
@@ -177,7 +173,7 @@ func (n *Node) Insert(method int, path string, handlerIndex int) *Node {
 	return curNode
 }
 
-func (n *Node) getHandlerSets(node *Node, method int, nodeParams map[string]string, params map[string]string) []*HandlerParamsSet {
+func (n *Node) getHandlerSets(node *Node, method string, nodeParams map[string]string, params map[string]string) []*HandlerParamsSet {
 	handlerSets := []*HandlerParamsSet{}
 
 	for _, m := range node.Methods {
@@ -217,7 +213,7 @@ func (n *Node) getHandlerSets(node *Node, method int, nodeParams map[string]stri
 	return handlerSets
 }
 
-func (n *Node) Search(method int, path string) [][]*HandlerParamsSet {
+func (n *Node) Search(method string, path string) [][]*HandlerParamsSet {
 	handlerSets := []*HandlerParamsSet{}
 
 	n.Params = map[string]string{}
@@ -300,7 +296,7 @@ func (n *Node) Search(method int, path string) [][]*HandlerParamsSet {
 	return [][]*HandlerParamsSet{results}
 }
 
-func NewNode(method int, handlerIndex int, children map[string]*Node) *Node {
+func NewNode(method string, handlerIndex int, children map[string]*Node) *Node {
 	node := &Node{
 		Order:  0,
 		Params: map[string]string{},
@@ -308,12 +304,12 @@ func NewNode(method int, handlerIndex int, children map[string]*Node) *Node {
 
 	node.Children = children
 
-	if method == -1 && handlerIndex == -1 {
-		node.Methods = []map[int]*HandlerSet{}
+	if method == "" && handlerIndex == -1 {
+		node.Methods = []map[string]*HandlerSet{}
 	} else {
-		m := map[int]*HandlerSet{}
+		m := map[string]*HandlerSet{}
 		m[method] = &HandlerSet{HandlerIndex: handlerIndex, PossibleKeys: []string{}, Score: 0}
-		node.Methods = []map[int]*HandlerSet{m}
+		node.Methods = []map[string]*HandlerSet{m}
 	}
 	node.Patterns = []Pattern{}
 
@@ -323,7 +319,7 @@ func NewNode(method int, handlerIndex int, children map[string]*Node) *Node {
 // Noop
 func main() {
 	js.Global().Set("WasmRouterAdd", js.FuncOf(func(this js.Value, args []js.Value) any {
-		method := int(args[0].Int())
+		method := args[0].String()
 		path := args[1].String()
 		handlerIndex := int(args[2].Int())
 		Add(method, path, handlerIndex)
@@ -331,23 +327,43 @@ func main() {
 	}))
 
 	js.Global().Set("WasmRouterMatch", js.FuncOf(func(this js.Value, args []js.Value) any {
-		method := int(args[0].Int())
+		method := args[0].String()
 		path := args[1].String()
-		return Match(method, path)
+		result := Match(method, path)
+		fmt.Printf("result: %v\n", result)
+		return result
 	}))
 
-	c := make(chan struct{})
-	<-c
+	node.Insert("GET", "/{id}", 10)
+	fmt.Printf("node: %v\n", node)
+
+	<-make(chan bool)
 }
 
-var node = NewNode(-1, -1, map[string]*Node{})
+var node = NewNode("", -1, map[string]*Node{})
 
-func Add(method int, path string, handlerIndex int) {
+func Add(method string, path string, handlerIndex int) {
 	fmt.Println("Add", method, path, handlerIndex)
 	node = node.Insert(method, path, handlerIndex)
 }
 
-func Match(method int, path string) js.Value {
+func Match(method string, path string) js.Value {
 	fmt.Println("Match", method, path)
-	return js.ValueOf(node.Search(method, path))
+	result := js.Global().Get("Array").New()
+	handlerSets := node.Search(method, path)
+	fmt.Printf("handlerSets: %v\n", handlerSets)
+
+	for _, handlerSet := range handlerSets[0] {
+		handlerIndex := handlerSet.HandlerIndex
+		params := js.Global().Get("Object").New()
+		for key, value := range handlerSet.Params {
+			params.Set(key, value)
+		}
+
+		fmt.Println(handlerIndex, params)
+
+		result = result.Call("concat", js.Global().Get("Array").New(handlerIndex, params))
+	}
+
+	return result
 }
