@@ -30,11 +30,13 @@ export class WasmRouter<T> implements Router<T> {
       this.mehotds.push(method.toLowerCase());
     }
     this.routes.push(handler);
-    this.wasmRouter.Add(this.mehotds.indexOf(method.toLowerCase()), path, this.routes.length - 1);
+    // @ts-expect-error
+    WasmRouterAdd(this.mehotds.indexOf(method.toLowerCase()), path, this.routes.length - 1);
   }
 
   match(method: string, path: string): Result<T> {
-    const matchResult = this.wasmRouter?.Match(method, path);
+    // @ts-expect-error
+    const matchResult = WasmRouterMatch(this.mehotds.indexOf(method.toLowerCase()), path);
     console.log(matchResult)
     return matchResult;
   }

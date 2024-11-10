@@ -322,24 +322,31 @@ func NewNode(method int, handlerIndex int, children map[string]*Node) *Node {
 
 // Noop
 func main() {
+	js.Global().Set("WasmRouterAdd", js.FuncOf(func(this js.Value, args []js.Value) any {
+		method := int(args[0].Int())
+		path := args[1].String()
+		handlerIndex := int(args[2].Int())
+		Add(method, path, handlerIndex)
+		return nil
+	}))
+
+	js.Global().Set("WasmRouterMatch", js.FuncOf(func(this js.Value, args []js.Value) any {
+		method := int(args[0].Int())
+		path := args[1].String()
+		return Match(method, path)
+	}))
+
 	c := make(chan struct{})
 	<-c
 }
 
 var node = NewNode(-1, -1, map[string]*Node{})
 
-//export Debug
-func Debug(path []js.Value) {
-	fmt.Printf("Debug %v\n", path)
-}
-
-//export Add
 func Add(method int, path string, handlerIndex int) {
 	fmt.Println("Add", method, path, handlerIndex)
 	node = node.Insert(method, path, handlerIndex)
 }
 
-//export Match
 func Match(method int, path string) js.Value {
 	fmt.Println("Match", method, path)
 	return js.ValueOf(node.Search(method, path))
